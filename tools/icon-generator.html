@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RKC Icon-Generator</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 20px; background: #0b0416; color: #fff; font: 16px/1.5 system-ui, sans-serif; max-width: 760px; }
+  h1 { font-size: 22px; } .hint { color: #b9addb; font-size: 14px; }
+  .out { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; }
+  .out figure { margin: 0; text-align: center; }
+  .out img { background: repeating-conic-gradient(#222 0 25%, #333 0 50%) 0 0 / 16px 16px; max-width: 160px; border-radius: 8px; }
+  a.dl { display: inline-block; margin-top: 6px; padding: 8px 12px; border-radius: 10px; background: #5b2a99; color: #fff; text-decoration: none; font-weight: 700; }
+  input[type=file] { margin: 10px 0; }
+</style>
+</head>
+<body>
+<h1>RKC Icon-Generator</h1>
+<p>Wähle dein <b>logo.jpg</b>. Daraus werden die vier PNG-Dateien erzeugt. Das Logo wird nur skaliert, nicht verändert.
+Lade alle vier herunter und lege sie in den Ordner <b>icons/</b> der App.</p>
+<input type="file" id="f" accept="image/*">
+<p class="hint">Alles passiert lokal in deinem Browser, nichts wird hochgeladen.</p>
+<div class="out" id="out"></div>
+<script>
+document.getElementById('f').addEventListener('change', (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    const out = document.getElementById('out'); out.innerHTML = '';
+    const src = document.createElement('canvas'); src.width = img.naturalWidth; src.height = img.naturalHeight;
+    const sc = src.getContext('2d'); sc.drawImage(img, 0, 0);
+    // Randfarbe = Mittel der vier Ecken des Logos
+    const W = src.width, H = src.height, pts = [[2,2],[W-3,2],[2,H-3],[W-3,H-3]];
+    const rgb = [0,0,0];
+    pts.forEach(([x,y]) => { const d = sc.getImageData(x,y,1,1).data; rgb[0]+=d[0]; rgb[1]+=d[1]; rgb[2]+=d[2]; });
+    const bg = 'rgb(' + rgb.map(v => Math.round(v/4)).join(',') + ')';
+    const make = (name, size, scale, fill) => {
+      const c = document.createElement('canvas'); c.width = c.height = size;
+      const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+      if (fill) { g.fillStyle = fill; g.fillRect(0, 0, size, size); }
+      const s = Math.round(size * scale), o = Math.round((size - s) / 2);
+      g.drawImage(img, o, o, s, s);
+      c.toBlob((b) => {
+        const url = URL.createObjectURL(b);
+        const fig = document.createElement('figure');
+        fig.innerHTML = '<img><figcaption></figcaption><a class="dl">Download</a>';
+        fig.querySelector('img').src = url;
+        fig.querySelector('figcaption').textContent = name;
+        const a = fig.querySelector('a'); a.href = url; a.download = name;
+        out.appendChild(fig);
+      }, 'image/png');
+    };
+    make('icon-192.png', 192, 1);
+    make('icon-512.png', 512, 1);
+    make('icon-maskable-512.png', 512, 0.72, bg);
+    make('favicon-64.png', 64, 1);
+  };
+  img.src = URL.createObjectURL(file);
+});
+</script>
+</body>
+</html>

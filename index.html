@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>RuzzKey Cards – Stream-Display</title>
+  <meta name="description" content="Stream-Display für die Live-Verkäufe von RuzzKey Cards (RKC).">
+  <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="dark">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+  <link rel="icon" type="image/jpeg" href="logo.jpg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preload" href="fonts/orbitron-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-rkc">
+
+  <!-- Ladebildschirm -->
+  <div id="splash" aria-hidden="true">
+    <div class="splash-glow"></div>
+    <img class="splash-logo logo-img" src="logo.jpg" alt="" width="1024" height="1024">
+    <div class="splash-name">RuzzKey Cards</div>
+    <div class="splash-dots"><span></span><span></span><span></span></div>
+  </div>
+
+  <!-- Hintergrund: eigene Medien + Partikel/Wesen -->
+  <div id="bgMedia" aria-hidden="true"></div>
+  <canvas id="scene" aria-hidden="true"></canvas>
+
+  <!-- Anzeige -->
+  <div id="stage">
+    <div id="drift">
+      <header class="top">
+        <div class="brand" data-mod="logo">
+          <div class="logo-wrap"><img class="logo logo-img" src="logo.jpg" alt="RuzzKey Cards Logo" width="1024" height="1024"></div>
+          <div class="brand-text">
+            <div class="shop-name">RuzzKey Cards</div>
+            <div class="tagline" id="tagline"></div>
+          </div>
+        </div>
+        <div class="clock" data-mod="clock">
+          <div class="clock-time"><span id="clockHM">--:--</span><span class="clock-sec" id="clockS">--</span></div>
+          <div class="clock-date" id="clockDate"></div>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="showcase" data-mod="showcase" aria-label="Karten-Schaufenster">
+          <div class="holo-frame">
+            <div class="holo-inner">
+              <div class="card-photo">
+                <img id="scPhoto" alt="" hidden>
+                <div class="photo-empty" id="scEmpty"><img class="logo-img" src="logo.jpg" alt=""></div>
+                <div class="foil"></div>
+              </div>
+              <div class="card-info">
+                <div class="label"><span class="spark">✦</span> Im Schaufenster</div>
+                <div class="sc-name" id="scName"></div>
+                <div class="sc-cond" id="scCond"></div>
+                <div class="sc-price-wrap">
+                  <div class="label">Startpreis</div>
+                  <div class="sc-price" id="scPrice"></div>
+                </div>
+              </div>
+            </div>
+            <div class="holo-sheen"></div>
+            <img class="set-badge logo-img" src="logo.jpg" alt="">
+            <span class="corner-star s1">✦</span><span class="corner-star s2">✦</span><span class="corner-star s3">✧</span>
+          </div>
+        </section>
+
+        <aside class="side">
+          <div class="panel timer-panel" data-mod="timer">
+            <div class="label">Countdown</div>
+            <div class="timer-display" id="timerDisplay">05:00</div>
+          </div>
+          <div class="panel goal-panel" data-mod="goal">
+            <div class="goal-head">
+              <span class="label">Tagesziel</span>
+              <span class="goal-nums"><b id="goalCurrent">0 €</b> <span class="goal-sep">/</span> <span id="goalTarget">0 €</span></span>
+            </div>
+            <div class="goal-bar"><div class="goal-fill" id="goalFill"></div><div class="goal-pct" id="goalPct">0 %</div></div>
+          </div>
+          <div class="panel last-panel" data-mod="lastSold">
+            <div class="label"><span class="spark">✦</span> Zuletzt verkauft</div>
+            <div class="last-text" id="lastSoldText"></div>
+          </div>
+          <div class="panel qr-panel" data-mod="qr">
+            <canvas id="qrCanvas" aria-label="QR-Code"></canvas>
+            <div class="qr-label" id="qrLabel"></div>
+          </div>
+        </aside>
+      </main>
+
+      <footer class="banner" data-mod="banner">
+        <span class="banner-star">✦</span>
+        <div class="banner-text" id="bannerText"></div>
+        <span class="banner-star">✦</span>
+      </footer>
+      <div class="ground" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <!-- Overlays aus eigenen Medien -->
+  <div id="overlayLayer" aria-hidden="true"></div>
+
+  <!-- Schnellleiste (erscheint per Fingertipp) -->
+  <div id="quickbar" class="ui-hidden" role="toolbar" aria-label="Schnellsteuerung">
+    <div class="qb-row" id="qbModules"></div>
+    <div class="qb-row">
+      <div class="qb-group"><span class="qb-label">Ziel</span>
+        <button data-goal="1">+1 €</button><button data-goal="5">+5 €</button><button data-goal="10">+10 €</button><button data-act="goalUndo" title="Rückgängig">↶</button>
+      </div>
+      <div class="qb-group"><span class="qb-label">Timer</span>
+        <button data-act="timerToggle" id="qbTimerToggle">▶</button><button data-act="timerReset" title="Reset">↺</button>
+      </div>
+      <div class="qb-group">
+        <button data-act="themeNext" title="Farbwelt wechseln">✦ <span id="qbTheme">RKC</span></button>
+        <button data-act="fullscreen" title="Vollbild">⛶</button>
+        <button data-act="menu" class="qb-menu">☰ Menü</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menü -->
+  <aside id="drawer" class="ui-hidden" aria-label="Menü">
+    <div class="drawer-head">
+      <img class="logo-img" src="logo.jpg" alt="">
+      <div class="drawer-title">RKC Einstellungen</div>
+      <button class="drawer-close" data-act="closeMenu" aria-label="Menü schließen">✕</button>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="modules" class="active">Module</button>
+      <button data-tab="design">Design</button>
+      <button data-tab="showcase">Schaufenster</button>
+      <button data-tab="goal">Ziel</button>
+      <button data-tab="timer">Timer</button>
+      <button data-tab="texts">Texte</button>
+      <button data-tab="media">Medien</button>
+      <button data-tab="qr">QR</button>
+      <button data-tab="system">System</button>
+    </nav>
+    <div class="drawer-body">
+
+      <section class="tab" data-panel="modules">
+        <h3>Module ein- und ausblenden</h3>
+        <div class="toggles" id="moduleToggles"></div>
+        <p class="hint">Tipp: Ein Fingertipp auf die Anzeige öffnet die Schnellleiste mit denselben Schaltern.</p>
+      </section>
+
+      <section class="tab" data-panel="design" hidden>
+        <h3>Farbwelt</h3>
+        <div class="theme-grid" id="themeGrid"></div>
+        <h3>Helligkeit</h3>
+        <label class="field">Szene (Partikel, Wesen, Hintergrund) <output id="outScene"></output>
+          <input type="range" id="sceneBrightness" min="0.15" max="1" step="0.05"></label>
+        <label class="field">Anzeige (Texte, Rahmen, Logo) <output id="outUi"></output>
+          <input type="range" id="uiBrightness" min="0.3" max="1" step="0.05"></label>
+        <h3>Bewegung &amp; Leistung</h3>
+        <label class="field">Bewegung
+          <select id="motionMode">
+            <option value="auto">Automatisch (Systemeinstellung)</option>
+            <option value="full">Voll</option>
+            <option value="reduced">Reduziert</option>
+          </select></label>
+        <label class="field">Darstellung
+          <select id="perfMode">
+            <option value="high">Gestochen scharf, 60 fps</option>
+            <option value="balanced">Scharf, 30 fps (kühler)</option>
+            <option value="eco">Akku sparen (geringere Auflösung, 30 fps)</option>
+          </select></label>
+        <label class="check"><input type="checkbox" id="burnIn"> Einbrennschutz (Elemente wandern sehr langsam)</label>
+      </section>
+
+      <section class="tab" data-panel="showcase" hidden>
+        <h3>Karte im Schaufenster</h3>
+        <label class="field">Kartenname <input type="text" id="inScName" maxlength="80" autocomplete="off"></label>
+        <label class="field">Zustand <input type="text" id="inScCond" list="condList" maxlength="40" autocomplete="off"></label>
+        <datalist id="condList">
+          <option value="Neu &amp; versiegelt"><option value="Mint"><option value="Near Mint"><option value="Excellent">
+          <option value="Good"><option value="Light Played"><option value="Played"><option value="Poor"><option value="Gegradet">
+        </datalist>
+        <label class="field">Startpreis <input type="text" id="inScPrice" inputmode="decimal" maxlength="20" autocomplete="off" placeholder="z. B. 1"></label>
+        <div class="btn-row">
+          <label class="btn file-btn">📷 Foto wählen<input type="file" id="inScPhoto" accept="image/*"></label>
+          <button class="btn" id="btnScPhotoRemove">Foto entfernen</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnScSold">✦ Als „Zuletzt verkauft“ eintragen</button>
+          <button class="btn" id="btnScClear">Felder leeren</button>
+        </div>
+      </section>
+
+      <section class="tab" data-panel="goal" hidden>
+        <h3>Tagesziel</h3>
+        <label class="field">Ziel in Euro <input type="number" id="inGoalTarget" min="1" step="1" inputmode="decimal"></label>
+        <label class="field">Aktueller Stand in Euro <input type="number" id="inGoalCurrent" min="0" step="0.01" inputmode="decimal"></label>
+        <div class="btn-row">
+          <button class="btn" data-goal="1">+1 €</button><button class="btn" data-goal="5">+5 €</button>
+          <button class="btn" data-goal="10">+10 €</button><button class="btn" data-goal="-1">−1 €</button>
+          <button class="btn" data-goal="-5">−5 €</button><button class="btn" data-act="goalUndo">↶ Rückgängig</button>
+        </div>
+        <label class="field">Eigenen Betrag hinzufügen
+          <span class="inline"><input type="number" id="inGoalAdd" step="0.01" inputmode="decimal" placeholder="z. B. 23,50"><button class="btn" id="btnGoalAdd">Hinzufügen</button></span></label>
+        <div class="btn-row"><button class="btn danger" id="btnGoalReset">Stand auf 0 setzen</button></div>
+      </section>
+
+      <section class="tab" data-panel="timer" hidden>
+        <h3>Countdown</h3>
+        <div class="inline">
+          <label class="field small">Minuten <input type="number" id="inTimerMin" min="0" max="599" step="1" inputmode="numeric"></label>
+          <label class="field small">Sekunden <input type="number" id="inTimerSec" min="0" max="59" step="1" inputmode="numeric"></label>
+          <button class="btn" id="btnTimerSet">Übernehmen</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn" data-preset="30">0:30</button><button class="btn" data-preset="60">1:00</button>
+          <button class="btn" data-preset="120">2:00</button><button class="btn" data-preset="300">5:00</button>
+          <button class="btn" data-preset="600">10:00</button><button class="btn" data-preset="900">15:00</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" data-act="timerToggle" id="btnTimerToggle">▶ Start</button>
+          <button class="btn" data-act="timerReset">↺ Reset</button>
+        </div>
+        <label class="check"><input type="checkbox" id="timerSound"> Signalton am Ende</label>
+        <div class="btn-row"><button class="btn" id="btnSoundTest">🔊 Ton testen</button></div>
+        <p class="hint">Der Ton wird erst nach einem Fingertipp freigeschaltet (Browser-Regel).</p>
+        <h3>Uhr</h3>
+        <label class="check"><input type="checkbox" id="clockSeconds"> Sekunden anzeigen</label>
+        <label class="check"><input type="checkbox" id="clockDateOn"> Datum anzeigen</label>
+      </section>
+
+      <section class="tab" data-panel="texts" hidden>
+        <h3>Info-Banner</h3>
+        <div id="bannerList" class="list"></div>
+        <div class="btn-row"><button class="btn" id="btnBannerAdd">+ Banner hinzufügen</button></div>
+        <label class="field">Wechsel alle <output id="outBannerInt"></output> Sekunden
+          <input type="range" id="bannerInterval" min="4" max="30" step="1"></label>
+        <h3>Zuletzt verkauft</h3>
+        <label class="field">Text <input type="text" id="inLastSold" maxlength="120" autocomplete="off" placeholder="z. B. Holo-Karte – 12 €"></label>
+        <h3>Untertitel neben dem Logo</h3>
+        <label class="field">Text <input type="text" id="inTagline" maxlength="60" autocomplete="off"></label>
+      </section>
+
+      <section class="tab" data-panel="media" hidden>
+        <h3>Eigene Medien</h3>
+        <p class="hint">Bilder, GIFs oder kurze Videos. Sie werden im Browser (IndexedDB) gespeichert und sind nach dem Neustart noch da. Nur eigene oder lizenzierte Dateien verwenden.</p>
+        <div class="btn-row"><label class="btn file-btn primary">＋ Dateien hinzufügen<input type="file" id="inMedia" accept="image/*,video/*" multiple></label></div>
+        <div id="mediaList" class="list"></div>
+        <p class="hint" id="storageInfo"></p>
+      </section>
+
+      <section class="tab" data-panel="qr" hidden>
+        <h3>QR-Code</h3>
+        <label class="field">Link zu deinem Profil <input type="url" id="inQrUrl" placeholder="https://…" autocomplete="off"></label>
+        <label class="field">Beschriftung <input type="text" id="inQrLabel" maxlength="40" autocomplete="off"></label>
+        <p class="hint">Der QR-Code wird lokal erzeugt, ohne externen Dienst. Modul „QR-Code“ unter „Module“ einschalten.</p>
+      </section>
+
+      <section class="tab" data-panel="system" hidden>
+        <h3>Display</h3>
+        <div class="status-line">Display wach halten: <b id="wlStatus">–</b></div>
+        <label class="check"><input type="checkbox" id="wakeLockOn"> Display wach halten (Wake Lock)</label>
+        <div class="btn-row">
+          <button class="btn" data-act="fullscreen">⛶ Vollbild + Querformat</button>
+          <button class="btn" id="btnWakeRetry">Wach halten erneut anfordern</button>
+        </div>
+        <h3>App</h3>
+        <div class="status-line">Offline-Modus: <b id="swStatus">–</b></div>
+        <div class="status-line">Speicher: <b id="lsStatus">–</b></div>
+        <div class="btn-row"><button class="btn danger" id="btnResetAll">Alle Einstellungen zurücksetzen</button></div>
+        <p class="hint">Medien und Schaufenster-Foto bleiben beim Zurücksetzen erhalten und können unter „Medien“ einzeln gelöscht werden.</p>
+      </section>
+    </div>
+  </aside>
+
+  <button id="menuBtn" class="ui-hidden" data-act="menu" aria-label="Menü öffnen">☰</button>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="vendor/qrcode.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
