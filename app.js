@@ -1353,7 +1353,7 @@
       }
     } catch (e) { /* ignorieren */ }
     try {
-      if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+      if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('portrait');
     } catch (e) { /* nur im Vollbild bzw. als installierte App möglich */ }
   }
 
