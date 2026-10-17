@@ -1,6 +1,6 @@
 /* Service Worker – RuzzKey Cards
    Bei jeder Änderung an den Dateien VERSION erhöhen, damit Updates sicher ankommen. */
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.0.1';
 const CACHE = 'rkc-shell-' + VERSION;
 const ASSETS = [
   './',
